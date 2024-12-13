@@ -22,6 +22,8 @@ Requires the latest version of XBMC (3.6-DEV-r33046 or later) from Xbins (as it 
 - Run the add-on and enjoy!
 
 ## Issues:
+- Gelbooru-type source currently don't work due to a malformed URL issue.
+- Danbooru only works with headers off (but introduces the issue of pagination causing a 403). Other Danbooru-type sources don't have this issue.
 - You tell me.
 
 # TODO: 
