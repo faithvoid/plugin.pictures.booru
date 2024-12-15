@@ -174,39 +174,6 @@ def create_query_string(source, tags='', page=1, limit=20):
 # Function to handle the search functionality
 
 
-# Function to handle the search functionality
-def search_posts(source, query_tags, blocked_tags, page=1, source_id=None):
-    formatted_tags = query_tags.replace(' ', '+')  # Format the tags
-
-    # Build query string for search
-    query_string = "index.php?page=dapi&s=post&q=index&tags={}&pid={}&json=1".format(
-        formatted_tags, page
-    )
-    xbmc.log("Query String: {}".format(query_string))  # Debug
-
-    # Fetch images using the query string
-    images = get_images_from_source(source, query_string)
-    
-    if not images:
-        xbmc.log("No images returned from the source.", xbmc.LOGERROR)
-        return
-    
-    xbmc.log("Images returned: {}".format(images))  # Debug
-
-    # Process each image and add to the directory
-    for img in images:
-        process_image(img, source, blocked_tags)
-
-    # Add next page option with source_id to preserve the context of the search
-    add_directory_item(
-        "{0}?action=search&page={1}&tags={2}&source_id={3}".format(sys.argv[0], page + 1, formatted_tags, source_id), 
-        "Next Page", 
-        is_folder=True
-    )
-
-    xbmcplugin.endOfDirectory(HANDLE)
-
-
 # Helper function to process individual images
 def process_image(img, source, blocked_tags):
     # Skip the post if it's blocked
@@ -228,29 +195,72 @@ def process_image(img, source, blocked_tags):
 
 # Function to handle the user input for searching posts
 def prompt_for_search_query():
+    # Create a keyboard instance for the user to enter search text
     keyboard = xbmc.Keyboard('', 'Enter Search Query')
-    keyboard.doModal()
-    if keyboard.isConfirmed():
-        return keyboard.getText()
-    return None  # Return None if no text is entered
+    keyboard.doModal()  # Show the keyboard modal
+    if keyboard.isConfirmed():  # Check if the user confirmed the input
+        return keyboard.getText()  # Return the entered text
+    return None  # Return None if the user canceled or entered no text
 
 
-# Function to display recent posts
+def search_posts(source, query_tags, blocked_tags, page=1, source_id=None):
+    # If no search tags are provided, prompt the user for input
+    if not query_tags:
+        query_tags = prompt_for_search_query()
+        if not query_tags:  # If no query is entered, we exit early
+            xbmc.log("No query entered. Returning to the previous menu.", xbmc.LOGINFO)
+            return  # Exit the function if no tags are provided
+
+    formatted_tags = query_tags.replace(' ', '+')  # Format the tags for the query
+
+    # Build query string for search
+    query_string = "index.php?page=dapi&s=post&q=index&tags={}&pid={}&json=1".format(
+        formatted_tags, page
+    )
+    xbmc.log("Query String: {}".format(query_string))  # Debug log for the query
+
+    # Fetch images using the query string
+    images = get_images_from_source(source, query_string)
+    
+    if not images:
+        xbmc.log("No images returned from the source.", xbmc.LOGERROR)
+        return  # Exit if no images are found
+    
+    xbmc.log("Images returned: {}".format(images))  # Debug log showing the results
+
+    # Process each image and add it to the directory
+    for img in images:
+        process_image(img, source, blocked_tags)
+
+    # Add next page option to preserve the search context (with query tags)
+    add_directory_item(
+        "{0}?action=search&page={1}&tags={2}&source_id={3}".format(
+            sys.argv[0], page + 1, formatted_tags, source_id
+        ),
+        "Next Page",
+        is_folder=True
+    )
+
+    xbmcplugin.endOfDirectory(HANDLE)  # Finalize the directory structure
+
+
 def display_recent_posts(source, blocked_tags, page=1, source_id=None):
-    # Use the correct query string for recent posts (no tags)
+        # Default case if neither Gelbooru nor Danbooru is detected
     query_string = create_query_string(source, tags='', page=page)
     
-    # Get images
+    # Get images from the source using the query string
     images = get_images_from_source(source, query_string)
 
+    # Process each image (including blocked checks)
     for img in images:
-        # Process each image (including blocked checks)
         if not is_post_blocked(img, blocked_tags, source["tags_key"]):
             process_image(img, source, blocked_tags)
 
-    # Add next page option with source_id to preserve the context
+    # Add next page option to allow navigation between pages
     add_directory_item(
-        "{0}?action=recent&page={1}&source_id={2}".format(sys.argv[0], page + 1, source_id),
+        "{0}?action=recent&page={1}&source_id={2}".format(
+            sys.argv[0], page + 1, source_id
+        ), 
         "Next Page", 
         is_folder=True
     )
@@ -279,7 +289,9 @@ def display_popular_posts(source, blocked_tags, page=1, source_id=None):
 
     # Add next page option to allow navigation between pages
     add_directory_item(
-        "{0}?action=popular&page={1}&source_id={2}".format(sys.argv[0], page + 1, source_id),
+        "{0}?action=popular&page={1}&source_id={2}".format(
+            sys.argv[0], page + 1, source_id
+        ), 
         "Next Page", 
         is_folder=True
     )
@@ -377,40 +389,37 @@ def main():
         if source_id != -1:
             # User selected a source, proceed with search or recent posts
             selected_source = SOURCES[source_id]
-            add_directory_item("{0}?action=popular&page=1&source_id={1}".format(sys.argv[0], source_id), "Popular Posts", is_folder=True)
-            add_directory_item("{0}?action=recent&page=1&source_id={1}".format(sys.argv[0], source_id), "Recent Posts", is_folder=True)
-            add_directory_item("{0}?action=search&page=1&source_id={1}".format(sys.argv[0], source_id), "Search Posts", is_folder=True)
+            add_directory_item("{0}?action=popular&page=1&source_id={1}".format(
+                sys.argv[0], source_id), 
+                "Popular Posts", 
+                is_folder=True
+            )
+            add_directory_item("{0}?action=recent&page=1&source_id={1}".format(
+                sys.argv[0], source_id), 
+                "Recent Posts", 
+                is_folder=True
+            )
+            add_directory_item("{0}?action=search&page=1&source_id={1}".format(
+                sys.argv[0], source_id), 
+                "Search Posts", 
+                is_folder=True
+            )
             xbmcplugin.endOfDirectory(HANDLE)
-        else:
-            xbmc.log("No source selected. Returning to the main menu.")
-            show_source_selection()
-
-    elif action == 'search':
-        if not search_tags:
-            # Prompt the user to enter a search term if no tags are provided
-            search_tags = prompt_for_search_query()
-            if search_tags:
-                # Proceed with search if valid input
-                selected_source = SOURCES[source_id]
-                search_posts(selected_source, search_tags, blocked_tags, page)
-            else:
-                xbmc.log('No search tags provided.', xbmc.LOGERROR)
-            xbmcplugin.endOfDirectory(HANDLE)
-        else:
-            # If search_tags exist, continue with the search and pagination
-            selected_source = SOURCES[source_id]
-            search_posts(selected_source, search_tags, blocked_tags, page)
-
-    elif action == 'popular':
-        # Display recent posts
-        selected_source = SOURCES[source_id]
-        display_popular_posts(selected_source, blocked_tags, page)
 
     elif action == 'recent':
-        # Display recent posts
-        selected_source = SOURCES[source_id]
-        display_recent_posts(selected_source, blocked_tags, page)
+        if source_id != -1:
+            selected_source = SOURCES[source_id]
+            display_recent_posts(selected_source, blocked_tags, page, source_id)
 
+    elif action == 'search':
+        if source_id != -1:
+            selected_source = SOURCES[source_id]
+            search_posts(selected_source, search_tags, blocked_tags, page, source_id)
+
+    elif action == 'popular':
+        if source_id != -1:
+            selected_source = SOURCES[source_id]
+            display_popular_posts(selected_source, blocked_tags, page, source_id)
 
     elif action == 'save':
         # Handle saving the image
@@ -418,7 +427,7 @@ def main():
         save_image(image_url)
 
     else:
-        # Main menu options: Select source
+        # If no action is provided, show the source selection menu
         show_source_selection()
 
 
