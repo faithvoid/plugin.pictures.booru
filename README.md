@@ -26,6 +26,7 @@ Requires the latest version of XBMC (3.6-DEV-r33046 or later) from Xbins (as it 
 - Extract the .zip file.
 - Copy the "xBooru" folder to Q:/plugins/pictures
 - Run the add-on and enjoy!
+- All explicit posts are blocked by default. To enable explicit posts, remove all ratings from "tags.txt" and add whichever tags you'd like to block. 
 
 ## Issues:
 - Gelbooru-type source currently don't work due to a malformed URL issue.
