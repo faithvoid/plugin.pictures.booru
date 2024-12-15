@@ -1,4 +1,4 @@
-# xBooru
+# BoxBooru
 *booru viewer for XBMC4Xbox.
 
 [](/release/default.tbn)
