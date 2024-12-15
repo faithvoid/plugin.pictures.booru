@@ -29,7 +29,6 @@ Requires the latest version of XBMC (3.6-DEV-r33046 or later) from Xbins (as it 
 - All explicit posts are blocked by default. To enable explicit posts, remove all ratings from "tags.txt" and add whichever tags you'd like to block. 
 
 ## Issues:
-- Gelbooru-type source currently don't work due to a malformed URL issue.
 - Danbooru only works with headers off (but introduces the issue of pagination causing a 403). Other Danbooru-type sources don't have this issue.
 - You tell me.
 
