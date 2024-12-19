@@ -1,0 +1,28 @@
+[
+    {
+        "name": "Danbooru",
+        "base_url": "https://danbooru.donmai.us/posts.json",
+        "preview_key": "preview_file_url",
+        "file_key": "file_url",
+        "tags_key": "tag_string",
+	"query_style": "Danbooru",
+        "use_custom_headers": False  # Enable headers for this source
+    },
+   {
+        "name": "Gelbooru",
+        "base_url": "https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&",
+        "preview_key": "preview_url",
+        "file_key": "file_url",
+        "tags_key": "tags",
+	"query_style": "Gelbooru",
+        "use_custom_headers": True  # Enable headers for this source
+    },
+        "name": "Safebooru",
+        "base_url": "https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&",
+        "preview_key": "preview_url",
+        "file_key": "file_url",
+        "tags_key": "tags",
+	"query_style": "Gelbooru",
+        "use_custom_headers": True  # Enable headers for this source
+    }
+]
