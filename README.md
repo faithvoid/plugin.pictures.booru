@@ -1,5 +1,5 @@
 # BoxBooru
-*booru viewer for XBMC4Xbox.
+*booru viewer for XBMC4Xbox. View recent posts, popular posts, wallpapers, search for your favourite tags, and more!
 
 ![](/release/default.tbn)
 
