@@ -7,38 +7,30 @@ import sys
 import urlparse
 import urllib
 import re
+import os
 
 HANDLE = int(sys.argv[1])
 
-# Sources configuration (name, URL, query parameters, etc.)
-SOURCES = [
-    {
-        "name": "Danbooru",
-        "base_url": "https://danbooru.donmai.us/posts.json",
-        "preview_key": "preview_file_url",
-        "file_key": "file_url",
-        "tags_key": "tag_string",
-	"query_style": "Danbooru",
-        "use_custom_headers": False  # Enable headers for this source
-    },
-   {
-        "name": "Gelbooru",
-        "base_url": "https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&",
-        "preview_key": "preview_url",
-        "file_key": "file_url",
-        "tags_key": "tags",
-	"query_style": "Gelbooru",
-        "use_custom_headers": True  # Enable headers for this source
-    },
-        "name": "Safebooru",
-        "base_url": "https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&",
-        "preview_key": "preview_url",
-        "file_key": "file_url",
-        "tags_key": "tags",
-	"query_style": "Gelbooru",
-        "use_custom_headers": True  # Enable headers for this source
-    }
-]
+# Path to the sources configuration file
+SOURCES_FILE = os.path.join(os.getcwd(), "sources.txt")
+
+# Function to read sources from a file
+def read_sources_from_file(filename):
+    """Read sources from a file and return a list of sources."""
+    if not os.path.exists(filename):
+        xbmcgui.Dialog().ok("Error", "Sources file not found: {}".format(filename))
+        return []
+    
+    try:
+        with open(filename, 'r') as file:
+            sources = json.load(file)
+        return sources
+    except Exception as e:
+        xbmcgui.Dialog().ok("Error", "Failed to read sources file: {}".format(str(e)))
+        return []
+
+# Read sources from the file
+SOURCES = read_sources_from_file(SOURCES_FILE)
 
 # Function to load blocked tags from a "tags.txt" file
 def load_blocked_tags():
@@ -315,7 +307,67 @@ def display_popular_posts(source, blocked_tags, page=1, source_id=None):
 
     xbmcplugin.endOfDirectory(HANDLE)
 
+def display_wallpapers_480(source, blocked_tags, page=1, source_id=None):
+    # Check if the source is Gelbooru-style or Danbooru-style
+    if source.get("query_style") == "Gelbooru":
+        # Use 'score:>=10' for Gelbooru-style sources
+        query_string = create_query_string(source, tags='width:640 height:480 rating:general -animated', page=page)
+    elif source.get("query_style") == "Danbooru":
+        # Use 'order:favcount' for Danbooru-style sources
+        query_string = create_query_string(source, tags='width:640 height:480 rating:safe -animated', page=page)
+    else:
+        # Default case if neither Gelbooru nor Danbooru is detected
+        query_string = create_query_string(source, tags='', page=page)
+    
+    # Get images from the source using the query string
+    images = get_images_from_source(source, query_string)
 
+    # Process each image (including blocked checks)
+    for img in images:
+        if not is_post_blocked(img, blocked_tags, source["tags_key"]):
+            process_image(img, source, blocked_tags)
+
+    # Add next page option to allow navigation between pages
+    add_directory_item(
+        "{0}?action=wallpapers480&page={1}&source_id={2}".format(
+            sys.argv[0], page + 1, source_id
+        ), 
+        "Next Page", 
+        is_folder=True
+    )
+
+    xbmcplugin.endOfDirectory(HANDLE)
+
+def display_wallpapers_720(source, blocked_tags, page=1, source_id=None):
+    # Check if the source is Gelbooru-style or Danbooru-style
+    if source.get("query_style") == "Gelbooru":
+        # Use 'score:>=10' for Gelbooru-style sources
+        query_string = create_query_string(source, tags='width:1280 height:720 rating:general -animated', page=page)
+    elif source.get("query_style") == "Danbooru":
+        # Use 'order:favcount' for Danbooru-style sources
+        query_string = create_query_string(source, tags='width:1280 height:720 rating:safe -animated', page=page)
+    else:
+        # Default case if neither Gelbooru nor Danbooru is detected
+        query_string = create_query_string(source, tags='', page=page)
+    
+    # Get images from the source using the query string
+    images = get_images_from_source(source, query_string)
+
+    # Process each image (including blocked checks)
+    for img in images:
+        if not is_post_blocked(img, blocked_tags, source["tags_key"]):
+            process_image(img, source, blocked_tags)
+
+    # Add next page option to allow navigation between pages
+    add_directory_item(
+        "{0}?action=wallpapers720&page={1}&source_id={2}".format(
+            sys.argv[0], page + 1, source_id
+        ), 
+        "Next Page", 
+        is_folder=True
+    )
+
+    xbmcplugin.endOfDirectory(HANDLE)
 
 # Function to handle saving the image to disk
 def save_image(image_url):
@@ -421,7 +473,23 @@ def main():
                 "Search Posts", 
                 is_folder=True
             )
+            add_directory_item("{0}?action=wallpapers480&page=1&source_id={1}".format(
+                sys.argv[0], source_id), 
+                "Wallpapers (640 x 480)", 
+                is_folder=True
+            )
+            add_directory_item("{0}?action=wallpapers720&page=1&source_id={1}".format(
+                sys.argv[0], source_id), 
+                "Wallpapers (1280 x 720)", 
+                is_folder=True
+            )
+
             xbmcplugin.endOfDirectory(HANDLE)
+
+    elif action == 'popular':
+        if source_id != -1:
+            selected_source = SOURCES[source_id]
+            display_popular_posts(selected_source, blocked_tags, page, source_id)
 
     elif action == 'recent':
         if source_id != -1:
@@ -433,10 +501,15 @@ def main():
             selected_source = SOURCES[source_id]
             search_posts(selected_source, search_tags, blocked_tags, page, source_id)
 
-    elif action == 'popular':
+    elif action == 'wallpapers480':
         if source_id != -1:
             selected_source = SOURCES[source_id]
-            display_popular_posts(selected_source, blocked_tags, page, source_id)
+            display_wallpapers_480(selected_source, blocked_tags, page, source_id)
+
+    elif action == 'wallpapers720':
+        if source_id != -1:
+            selected_source = SOURCES[source_id]
+            display_wallpapers_720(selected_source, blocked_tags, page, source_id)
 
     elif action == 'save':
         # Handle saving the image
